@@ -1,0 +1,3 @@
+[submodule "np-app-audiolm-trainer"]
+	path = np-app-audiolm-trainer
+	url = https://github.com/nota-github/np-app-audiolm-trainer
