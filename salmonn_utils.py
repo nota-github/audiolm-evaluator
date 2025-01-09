@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 # Add custom module path
-sys.path.append(str(Path(__file__).parent / "np-app-audiolm-trainer"))
+sys.path.append(str(Path(__file__).parent / "audiolm-trainer"))
 
 # Custom modules
 from models.salmonn import SALMONN

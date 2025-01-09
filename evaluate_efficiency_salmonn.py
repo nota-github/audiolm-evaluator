@@ -1,3 +1,4 @@
+
 import sys
 from pathlib import Path
 import torch
@@ -9,20 +10,32 @@ import gc
 import subprocess
 from transformers import DynamicCache
 from tqdm import tqdm
-from salmonn_utils import load_preprocessor, load_model
-
-sys.path.append(str(Path().parent / "np-app-audiolm-trainer"))
-from config import Config
-from utils import prepare_sample
-
 
 import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from transformers import WhisperFeatureExtractor
+
+# From trainer
+sys.path.append(str(Path().parent / "audiolm-trainer"))
+from config import Config
 from dataset import SALMONNDataset
-from utils import get_dataloader
+from utils import get_dataloader, prepare_sample
+from models.salmonn import SALMONN
+
+
+def load_model(salmonn_preprocessor):
+    model = salmonn_preprocessor.llama_model
+    tokenizer = salmonn_preprocessor.llama_tokenizer
+    return model, tokenizer
+
+
+def load_preprocessor(cfg):
+    salmonn_preprocessor = SALMONN.from_config(cfg.config.model)
+    salmonn_preprocessor.to(cfg.config.run.device)
+    salmonn_preprocessor.eval()
+    return salmonn_preprocessor
 
 
 class MockDataset(SALMONNDataset):
@@ -79,7 +92,8 @@ def parse_args():
         "change to --cfg-options instead.",
     )
 
-    parser.add_argument("--num-it", type=int, default=10)
+    parser.add_argument("--num_it", type=int, default=100)
+    parser.add_argument("--num_warmup", type=int, default=10)
     return parser.parse_args()
 
 
@@ -150,56 +164,66 @@ def model_inference(cfg, samples, test_prompt, salmonn):
     tpot = end_time - start_time
 
     inference_time = ttft + tpot
-    return inference_time
+    return inference_time, ttft, tpot
 
 
 def main(args):
     cfg = Config(args)
 
-    with open("np-app-audiolm-trainer/prompts/test_prompt.json", "r") as f:
-        test_prompt = json.load(f)
+    print("Force batch size as 1")
+    cfg.config.run.batch_size_eval = 1
 
+    # Load model
     salmonn_preprocessor = load_preprocessor(cfg)
     llama_model, _ = load_model(salmonn_preprocessor)
     salmonn_preprocessor.llama_model = llama_model
 
+    # Load dataset
+    with open("audiolm-trainer/prompts/test_prompt.json", "r") as f:
+        test_prompt = json.load(f)
     dataloader = MockDataset.make_mock_dataloader(cfg, sr=16000, audio_length=10)
     sample_batch = next(iter(dataloader))
     sample_batch = prepare_sample(sample_batch, cuda_enabled=torch.cuda.is_available())
+
+    # Measure memory and latency
     memory_usages = []
     inference_times = []
-    memory_usages_before = []
+    ttfts = []
+    tpots = []
 
-    for _ in tqdm(range(args.num_it)):
+    for it in tqdm(range(args.num_it + args.num_warmup)):
         torch.cuda.synchronize()
-        before_memory_allocated = torch.cuda.memory_allocated()
         with torch.no_grad():
-            inference_time = model_inference(
+            inference_time, ttft, tpot = model_inference(
                 cfg,
                 sample_batch,
                 test_prompt,
                 salmonn_preprocessor,
             )
-
         torch.cuda.synchronize()
         after_memory_allocated = torch.cuda.max_memory_allocated()
 
         torch.cuda.empty_cache()  # Clear the cache to get more accurate measurements
         gc.collect()
 
-        memory_usages.append(after_memory_allocated)
-        memory_usages_before.append(before_memory_allocated)
-        inference_times.append(inference_time)
+        if it >= args.num_warmup:
+            memory_usages.append(after_memory_allocated)
+            inference_times.append(inference_time)
+            ttfts.append(ttft)
+            tpots.append(tpot)
 
-    batch = sample_batch["spectrogram"].shape[0]
 
     average_memory_usage = np.mean(memory_usages)
     average_inference_time = np.mean(inference_times)
-    throughput = batch / average_inference_time
+    average_ttft = np.mean(ttfts)
+    average_tpot = np.mean(tpots)
 
-    print(f"Average memory used during inference: {average_memory_usage/1024**3:.4f} GB")
+    print(
+        f"Average memory used during inference: {average_memory_usage/1024**3:.4f} GB"
+    )
     print(f"Average inference time: {average_inference_time:.4f} seconds")
-    print(f"Throughput: {throughput:.2f} inferences/second")
+    print(f"Average TTFT: {average_ttft:.4f} seconds")
+    print(f"Average TPOT: {average_tpot:.4f} seconds")
 
 
 if __name__ == "__main__":
