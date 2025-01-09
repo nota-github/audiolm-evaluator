@@ -14,7 +14,7 @@ sys.path.append(str(Path(__file__).parent / "audiolm-trainer"))
 from salmonn_utils import SALMONNTestDataset, load_preprocessor, load_model
 from config import Config
 from utils import get_dataloader, prepare_sample
-from metrics import compute_wer
+from metrics import compute_wer, compute_spider
 
 
 def parse_args():
@@ -121,7 +121,7 @@ def main(args):
         compute_wer(hyps, refs)
         
     elif args.task == 'aac':
-        pass
+        compute_spider(hyps, refs)
 
     result_df = pd.DataFrame({"testset_id": testset_ids, "text": hyps})
     result_df.to_csv("submission.csv", index=False)
