@@ -45,8 +45,8 @@ model:
 
   multi_prompt: True
   prompt_template: "USER: {}\nASSISTANT:"
-  prompt_path: "/root/np-app-audiolm-trainer/prompts/train_prompt.json"
-  test_prompt_path: "/root/np-app-audiolm-trainer/prompts/train_prompt.json"
+  prompt_path: "audiolm-trainer/prompts/train_prompt.json"
+  test_prompt_path: "audiolm-trainer/prompts/test_prompt.json"
   max_txt_len: 300
   end_sym: "<|end_of_text|>"
 
@@ -59,10 +59,11 @@ generate:
   top_p: 0.9
   repetition_penalty: 1.0
   length_penalty: 1.0
+  end_sym: "<|end_of_text|>"
 
 datasets:
   prefix: "/root/base_data/datasets"
-  test_ann_path: "/root/np-app-audiolm-evaluator/data/asr/asr_salmonn_format.json"
+  test_ann_path: "/root/audiolm-evaluator/data/test_asr.json"
   whisper_path: "openai/whisper-large-v2"
 
 run:
