@@ -12,14 +12,9 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent / "audiolm-trainer"))
 
 # Custom modules
-from salmonn_utils import SALMONNTestDataset
-from models.salmonn import SALMONN
+from salmonn_utils import SALMONNTestDataset, load_preprocessor, load_model
 from config import Config
 from utils import get_dataloader, prepare_sample
-
-
-# Set environment variables
-# os.environ['CUDA_VISIBLE_DEVICES'] = '5'
 
 
 def parse_args():
@@ -48,19 +43,6 @@ def get_dataset(dataset_cfg, run_cfg):
 
     test_loader = get_dataloader(testset, run_cfg, is_train=False, use_distributed=False)
     return test_loader
-
-
-def load_preprocessor(cfg):
-    salmonn_preprocessor = SALMONN.from_config(cfg.config.model)
-    salmonn_preprocessor.to(cfg.config.run.device)
-    salmonn_preprocessor.eval()
-    return salmonn_preprocessor
-
-
-def load_model(salmonn_preprocessor):
-    model = salmonn_preprocessor.llama_model
-    tokenizer = salmonn_preprocessor.llama_tokenizer
-    return model, tokenizer
 
 
 def main(args):
