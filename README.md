@@ -3,6 +3,8 @@ Audio Language Model Evaluator
 
 ## Install dependencies
 ```bash
+git clone --recursive https://github.com/nota-github/audiolm-evaluator
+pip install -r audiolm-trainer/requirements.txt
 pip install -r requirements.txt
 ```
 
