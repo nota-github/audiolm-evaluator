@@ -30,7 +30,7 @@ def load_model(salmonn_preprocessor):
 
 
 class SALMONNTestDataset(Dataset):
-    def __init__(self, prefix, ann_path, whisper_path):
+    def __init__(self, prefix, ann_path, whisper_path, task=None):
         super().__init__()
 
         self.prefix = prefix
@@ -38,6 +38,8 @@ class SALMONNTestDataset(Dataset):
         self.annotation = json.load(open(ann_path, "r"))["annotation"]
 
         self.wav_processor = WhisperFeatureExtractor.from_pretrained(whisper_path)
+
+        self.task = task
 
     def __len__(self):
         return len(self.annotation)
@@ -56,7 +58,7 @@ class SALMONNTestDataset(Dataset):
         Q = [s["Q"] for s in samples]
         id = [s["id"] for s in samples]
 
-        return {
+        entity = {
             "testset_id": testset_id,
             "spectrogram": cat_spectrogram,
             "raw_wav": raw_wav,
@@ -65,6 +67,11 @@ class SALMONNTestDataset(Dataset):
             "Q": Q,
             "id": id,
         }
+
+        if self.task is not None:
+            entity['text'] = [s["text"] for s in samples]
+
+        return entity
 
     def __getitem__(self, index):
         ann = self.annotation[index]
@@ -93,7 +100,7 @@ class SALMONNTestDataset(Dataset):
         task = ann.get("task", "asr")
         Q = ann.get("Q", "")
 
-        return {
+        entity = {
             "testset_id": testset_id,
             "spectrogram": spectrogram,
             "raw_wav": audio,
@@ -101,3 +108,8 @@ class SALMONNTestDataset(Dataset):
             "Q": Q,
             "id": ann["path"],
         }
+
+        if self.task is not None:
+            entity['text'] = ann['text']
+
+        return entity

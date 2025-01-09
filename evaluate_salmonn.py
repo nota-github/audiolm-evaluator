@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 import random
 import sys
 import torch
@@ -15,6 +14,7 @@ sys.path.append(str(Path(__file__).parent / "audiolm-trainer"))
 from salmonn_utils import SALMONNTestDataset, load_preprocessor, load_model
 from config import Config
 from utils import get_dataloader, prepare_sample
+from metrics import compute_wer
 
 
 def parse_args():
@@ -33,12 +33,13 @@ def parse_args():
         "in xxx=yyy format will be merged into config file (deprecate), "
         "change to --cfg-options instead.",
     )
+    parser.add_argument("--task", type=str, default=None, help="Task to evaluate", choices=[None, 'asr', 'aac'])
     return parser.parse_args()
 
 
-def get_dataset(dataset_cfg, run_cfg):
+def get_dataset(dataset_cfg, run_cfg, task):
     testset = SALMONNTestDataset(
-        dataset_cfg.prefix, dataset_cfg.test_ann_path, dataset_cfg.whisper_path
+        dataset_cfg.prefix, dataset_cfg.test_ann_path, dataset_cfg.whisper_path, task
     )
 
     test_loader = get_dataloader(testset, run_cfg, is_train=False, use_distributed=False)
@@ -54,13 +55,13 @@ def main(args):
     salmonn_preprocessor.llama_model = llama_model
 
     # Load data
-    dataloader = get_dataset(cfg.config.datasets, cfg.config.run)
+    dataloader = get_dataset(cfg.config.datasets, cfg.config.run, args.task)
 
     with open("audiolm-trainer/prompts/test_prompt.json", "r") as f:
         test_prompt = json.load(f)
 
     # Evaluation
-    testset_ids, hyps = [], []
+    testset_ids, hyps, refs = [], [], []
     for samples in tqdm(dataloader):
         testset_id = samples["testset_id"]
         testset_ids.extend(testset_id)
@@ -111,11 +112,23 @@ def main(args):
         hyp = [result.split(generate_cfg.end_sym)[0].lower() for result in results]
         hyps.extend(hyp)
 
+        if args.task is not None:
+            ref = samples["text"]
+            refs.extend(ref)
+
+
+    if args.task == 'asr':
+        compute_wer(hyps, refs)
+        
+    elif args.task == 'aac':
+        pass
+
     result_df = pd.DataFrame({"testset_id": testset_ids, "text": hyps})
     result_df.to_csv("submission.csv", index=False)
 
 
 if __name__ == '__main__':
     args = parse_args()
+
     random.seed(42)
     main(args)
