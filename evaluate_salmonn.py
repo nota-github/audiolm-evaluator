@@ -33,7 +33,8 @@ def parse_args():
         "in xxx=yyy format will be merged into config file (deprecate), "
         "change to --cfg-options instead.",
     )
-    parser.add_argument("--task", type=str, default=None, help="Task to evaluate", choices=[None, 'asr', 'aac'])
+    parser.add_argument("--task", type=str, default=None, help="Task to evaluate", choices=['asr', 'aac'])
+    parser.add_argument("--skip_scoring", action='store_true', help='if True, skip scoring after inference')
     return parser.parse_args()
 
 
@@ -112,16 +113,16 @@ def main(args):
         hyp = [result.split(generate_cfg.end_sym)[0].lower() for result in results]
         hyps.extend(hyp)
 
-        if args.task is not None:
+        if not args.skip_scoring:
             ref = samples["text"]
             refs.extend(ref)
 
-
-    if args.task == 'asr':
-        compute_wer(hyps, refs)
-        
-    elif args.task == 'aac':
-        compute_spider(hyps, refs)
+    if not args.skip_scoring:
+        if args.task == 'asr':
+            compute_wer(hyps, refs)
+            
+        elif args.task == 'aac':
+            compute_spider(hyps, refs)
 
     result_df = pd.DataFrame({"testset_id": testset_ids, "text": hyps})
     result_df.to_csv("submission.csv", index=False)
