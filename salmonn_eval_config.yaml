@@ -1,0 +1,72 @@
+# Copyright (2024) Tsinghua University, Bytedance Ltd. and/or its affiliates
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+model:
+  # paths
+  llama_path: "meta-llama/Llama-3.2-3B-Instruct"
+  whisper_path: "openai/whisper-large-v2"
+  beats_path: "/root/base_data/checkpoints/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2/BEATs_iter3_plus_AS2M_finetuned_on_AS2M_cpt2.pt"
+
+  token: "" # Use hf token to access gated repositories
+  only_preprocessor: False
+
+  ckpt: "/root/base_data/checkpoints/llama_stage2_ckpt.pth" # model used for decoding
+
+  freeze_whisper: True
+  freeze_beats: True
+
+  # window-level Q-Former
+  use_speech_Qformer: True
+  freeze_speech_QFormer: False
+  window_level_Qformer: True
+  num_speech_query_token: 1
+  second_per_window: 0.333333
+  second_stride: 0.333333
+
+  speech_llama_proj_model: ""
+  freeze_speech_llama_proj: False
+
+  # LoRA
+  lora: True
+  lora_rank: 8
+  lora_alpha: 32
+  lora_dropout: 0.1
+
+  multi_prompt: True
+  prompt_template: "USER: {}\nASSISTANT:"
+  prompt_path: "audiolm-trainer/prompts/train_prompt.json"
+  test_prompt_path: "audiolm-trainer/prompts/test_prompt.json"
+  max_txt_len: 300
+  end_sym: "<|end_of_text|>"
+
+generate:
+  max_new_tokens: 200
+  num_beams: 4
+  do_sample: False
+  min_length: 1
+  temperature: 1.0
+  top_p: 0.9
+  repetition_penalty: 1.0
+  length_penalty: 1.0
+  end_sym: "<|end_of_text|>"
+
+datasets:
+  prefix: "/root/base_data/datasets"
+  test_ann_path: "/root/audiolm-evaluator/data/test_asr.json"
+  whisper_path: "openai/whisper-large-v2"
+
+run:
+  batch_size_eval: 8
+  num_workers: 8
+  device: "cuda"

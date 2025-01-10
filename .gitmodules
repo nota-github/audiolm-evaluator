@@ -1,0 +1,3 @@
+[submodule "audiolm-trainer"]
+	path = audiolm-trainer
+	url = https://github.com/nota-github/audiolm-trainer
