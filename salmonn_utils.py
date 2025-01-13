@@ -10,6 +10,8 @@ from torch.utils.data import Dataset
 from torch.nn.utils.rnn import pad_sequence
 from transformers import WhisperFeatureExtractor
 
+import os
+
 # Add custom module path
 sys.path.append(str(Path(__file__).parent / "audiolm-trainer"))
 
@@ -75,12 +77,12 @@ class SALMONNTestDataset(Dataset):
 
     def __getitem__(self, index):
         ann = self.annotation[index]
-        audio_path = self.prefix + '/' + ann["path"]
+        audio_path = os.path.join(self.prefix, ann["path"])
         try:
             audio, sr = sf.read(audio_path)
         except:
             print(f"Failed to load {audio_path}. Load 0-th sample for now")
-            audio, sr = sf.read(self.prefix + '/' + self.annotation[0]["path"])
+            audio, sr = sf.read(os.path.join(self.prefix, self.annotation[0]["path"]))
         
         if len(audio.shape) == 2: # stereo to mono
             audio = audio[:, 0]
