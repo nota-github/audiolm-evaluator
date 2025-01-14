@@ -63,7 +63,9 @@ generate:
 
 datasets:
   prefix: "/root/base_data/datasets"
-  test_ann_path: "/root/audiolm-evaluator/data/test_asr.json"
+  # test_ann_path: "data/test_aac.json" # (deprecated next update)
+  test_ann_path_asr: "data/test_asr.json"
+  test_ann_path_aac: "data/test_aac.json"
   whisper_path: "openai/whisper-large-v2"
 
 run:
