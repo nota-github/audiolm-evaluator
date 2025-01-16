@@ -10,7 +10,7 @@ from fractions import Fraction
 from collections import defaultdict, Counter
 from typing import Any, Callable, Mapping, Union, Iterator, List, Match, Optional
 from more_itertools import windowed
-
+from aac_metrics.functional.spider import spider
 
 ADDITIONAL_DIACRITICS = {
     "œ": "oe",
@@ -953,11 +953,8 @@ class ParticipantVisibleError(Exception):
     # All other errors will only be shown to the competition host. This helps prevent unintentional leakage of solution data.
     pass
 
-
 def compute_spider(hyps, refs) -> float:
     refs = [[ref_] for ref_ in refs] # need to be List[List[str]]
-
-    corpus_score, _ = cider_d(hyps, refs)
-    
-    spider = float(f"{corpus_score['cider_d'].item()*100.0:.4f}")
-    print(f"SPIDEr: {spider}")
+    spider_result = spider(candidates=hyps, mult_references=refs)
+    spider_score = round(float(spider_result[0]['spider']),4)
+    print(f"SPIDEr: {spider_score}")
